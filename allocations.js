@@ -47,7 +47,6 @@ function initializeAllocationsPage() {
   saveButton.addEventListener("click", saveCurrentAllocations);
   nextAllocationButton.addEventListener("click", goToNextChickenType);
 
-  allocationAverageSalesInput.value = getSharedAverageDailySales(chickenConfigs);
   allocationTypeSelect.value = "";
   loadSelectedChickenValues();
   updateAllocationPlaceholderStyle();
@@ -85,6 +84,8 @@ function loadSelectedChickenValues() {
     return;
   }
 
+  allocationAverageSalesInput.value = chickenConfigs[type]?.averageDailySales ?? 0;
+
   allocationWeekdays.forEach((day) => {
     document.getElementById(`allocation-${day}`).value = pulls[day] ?? 0;
   });
@@ -99,11 +100,7 @@ async function saveCurrentAllocations() {
     return;
   }
 
-  const sharedAverageSales = parseAllocationValue(allocationAverageSalesInput.value);
-
-  Object.keys(chickenConfigs).forEach((configType) => {
-    chickenConfigs[configType].averageDailySales = sharedAverageSales;
-  });
+  chickenConfigs[type].averageDailySales = parseAllocationValue(allocationAverageSalesInput.value);
 
   allocationWeekdays.forEach((day) => {
     chickenConfigs[type].pulls[day] = parseAllocationValue(document.getElementById(`allocation-${day}`).value);
@@ -113,8 +110,8 @@ async function saveCurrentAllocations() {
   const nextType = getNextChickenType(type);
   const nextLabel = nextType ? chickenConfigs[nextType]?.label || nextType : "";
   allocationMessage.textContent = nextType
-    ? `${chickenConfigs[type].label} defaults and average daily sales saved. Next up: ${nextLabel}.`
-    : `${chickenConfigs[type].label} defaults and average daily sales saved.`;
+    ? `${chickenConfigs[type].label} defaults and sales number saved. Next up: ${nextLabel}.`
+    : `${chickenConfigs[type].label} defaults and sales number saved.`;
 }
 
 function updateAllocationPlaceholderStyle() {
@@ -175,9 +172,4 @@ function goToNextChickenType() {
 
   allocationTypeSelect.value = nextType;
   loadSelectedChickenValues();
-}
-
-function getSharedAverageDailySales(configs) {
-  const firstType = Object.keys(configs || {})[0];
-  return firstType ? configs[firstType]?.averageDailySales ?? 0 : 0;
 }

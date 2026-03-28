@@ -312,6 +312,10 @@ h2 {
   display: none;
 }
 
+.panel.is-hidden {
+  display: none;
+}
+
 .step-panel.is-locked .field-grid,
 .step-panel.is-locked table,
 .step-panel.is-locked .step-footer,
