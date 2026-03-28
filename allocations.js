@@ -2,13 +2,13 @@ const allocationApi = window.ChickenAllocations || {};
 const allocationWeekdays = allocationApi.WEEKDAYS || ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const loadChickenConfigs = allocationApi.getChickenConfigs || (() => ({}));
 const persistChickenConfigs = allocationApi.saveChickenConfigs || ((configs) => configs);
-const restoreChickenConfigs = allocationApi.resetChickenConfigs || (() => ({}));
 const parseAllocationValue = allocationApi.sanitizePullValue || fallbackAllocationValue;
 
 const allocationTypeSelect = document.getElementById("allocationChickenType");
 const saveButton = document.getElementById("saveAllocationsButton");
-const resetButton = document.getElementById("resetAllocationsButton");
+const nextAllocationButton = document.getElementById("nextAllocationButton");
 const allocationMessage = document.getElementById("allocationMessage");
+const allocationDefaultsPanel = document.getElementById("allocationDefaultsPanel");
 const APP_THEME_CLASSES = [
   "theme-filets",
   "theme-breakfast-filets",
@@ -44,7 +44,7 @@ function initializeAllocationsPage() {
   populateChickenTypes();
   allocationTypeSelect.addEventListener("change", loadSelectedChickenValues);
   saveButton.addEventListener("click", saveCurrentAllocations);
-  resetButton.addEventListener("click", resetAllAllocations);
+  nextAllocationButton.addEventListener("click", goToNextChickenType);
 
   allocationTypeSelect.value = "";
   loadSelectedChickenValues();
@@ -71,6 +71,8 @@ function loadSelectedChickenValues() {
   const pulls = chickenConfigs[type]?.pulls || {};
   updateAllocationPlaceholderStyle();
   applyAppTheme(type);
+  updateAllocationPanelState(type);
+  updateNextAllocationButton();
 
   if (!type) {
     allocationWeekdays.forEach((day) => {
@@ -99,15 +101,11 @@ async function saveCurrentAllocations() {
   });
 
   chickenConfigs = await persistChickenConfigs(chickenConfigs);
-  allocationMessage.textContent = `${chickenConfigs[type].label} defaults saved.`;
-}
-
-async function resetAllAllocations() {
-  chickenConfigs = await restoreChickenConfigs();
-  populateChickenTypes();
-  allocationTypeSelect.value = "";
-  loadSelectedChickenValues();
-  allocationMessage.textContent = "All chicken defaults were reset.";
+  const nextType = getNextChickenType(type);
+  const nextLabel = nextType ? chickenConfigs[nextType]?.label || nextType : "";
+  allocationMessage.textContent = nextType
+    ? `${chickenConfigs[type].label} defaults saved. Next up: ${nextLabel}.`
+    : `${chickenConfigs[type].label} defaults saved.`;
 }
 
 function updateAllocationPlaceholderStyle() {
@@ -126,4 +124,46 @@ function applyAppTheme(type) {
   if (themeClass) {
     document.body.classList.add(themeClass);
   }
+}
+
+function updateAllocationPanelState(type) {
+  allocationDefaultsPanel.classList.toggle("is-hidden", !type);
+  allocationDefaultsPanel.classList.toggle("is-open", Boolean(type));
+}
+
+function getOrderedChickenTypes() {
+  return Array.from(allocationTypeSelect.options)
+    .map((option) => option.value)
+    .filter(Boolean);
+}
+
+function getNextChickenType(currentType) {
+  const orderedTypes = getOrderedChickenTypes();
+  const currentIndex = orderedTypes.indexOf(currentType);
+
+  if (currentIndex === -1 || currentIndex >= orderedTypes.length - 1) {
+    return "";
+  }
+
+  return orderedTypes[currentIndex + 1];
+}
+
+function updateNextAllocationButton() {
+  const currentType = allocationTypeSelect.value;
+  const nextType = getNextChickenType(currentType);
+
+  nextAllocationButton.disabled = !nextType;
+  nextAllocationButton.textContent = nextType
+    ? `Go To ${chickenConfigs[nextType]?.label || nextType}`
+    : "All Chicken Types Complete";
+}
+
+function goToNextChickenType() {
+  const nextType = getNextChickenType(allocationTypeSelect.value);
+  if (!nextType) {
+    return;
+  }
+
+  allocationTypeSelect.value = nextType;
+  loadSelectedChickenValues();
 }

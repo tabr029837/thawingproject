@@ -26,9 +26,10 @@
           <select id="allocationChickenType"></select>
         </label>
       </div>
+      <p class="step-hint" id="allocationSelectionHint">Select a chicken type to edit its default pulls.</p>
     </section>
 
-    <section class="panel">
+    <section class="panel is-hidden" id="allocationDefaultsPanel">
       <div class="section-heading">
         <div>
           <h2>Default Pulls</h2>
@@ -60,7 +61,7 @@
       </table>
 
       <div class="actions split-actions">
-        <button type="button" class="secondary-button" id="resetAllocationsButton">Reset All Defaults</button>
+        <button type="button" class="secondary-button" id="nextAllocationButton">Go To Next Chicken</button>
         <button type="button" id="saveAllocationsButton">Save Allocations</button>
       </div>
 
