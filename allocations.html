@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Change Thawing Allocations</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <section class="panel hero">
+      <p class="eyebrow">Settings</p>
+      <h1>Change Thawing Allocations</h1>
+      <p class="intro">
+        Select a chicken type and save the default pull numbers for Monday through Saturday.
+      </p>
+      <div class="hero-actions">
+        <a class="secondary-button link-button" href="index.html">Back To Analyzer</a>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="field-grid">
+        <label class="field">
+          <span>Chicken Type</span>
+          <select id="allocationChickenType"></select>
+        </label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Default Pulls</h2>
+          <p>These values become the defaults when you load that chicken on the main page.</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Mon</th>
+            <th>Tue</th>
+            <th>Wed</th>
+            <th>Thu</th>
+            <th>Fri</th>
+            <th>Sat</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="number" id="allocation-Mon" min="0" step="0.1"></td>
+            <td><input type="number" id="allocation-Tue" min="0" step="0.1"></td>
+            <td><input type="number" id="allocation-Wed" min="0" step="0.1"></td>
+            <td><input type="number" id="allocation-Thu" min="0" step="0.1"></td>
+            <td><input type="number" id="allocation-Fri" min="0" step="0.1"></td>
+            <td><input type="number" id="allocation-Sat" min="0" step="0.1"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="actions split-actions">
+        <button type="button" class="secondary-button" id="resetAllocationsButton">Reset All Defaults</button>
+        <button type="button" id="saveAllocationsButton">Save Allocations</button>
+      </div>
+
+      <p class="save-message" id="allocationMessage"></p>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="firebase-auth.js"></script>
+  <script src="allocations-data.js"></script>
+  <script src="allocations.js"></script>
+</body>
+</html>

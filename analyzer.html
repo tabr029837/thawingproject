@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chicken Analysis</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <section class="panel hero">
+      <p class="eyebrow">Analysis</p>
+      <h1 id="analysisTitle">Chicken Analysis</h1>
+      <p class="intro" id="analysisSubtitle"></p>
+      <a class="secondary-button link-button" href="index.html">Back To Input</a>
+    </section>
+
+    <section class="panel">
+      <div class="summary-grid" id="summaryGrid"></div>
+      <p class="assumptions" id="assumptionsText"></p>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2 id="recommendationTitle">Pull Recommendations</h2>
+          <p id="recommendationSubtitle">Recommendations are grouped by the day the pull was made.</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Pull Day</th>
+            <th>Weekly Build To</th>
+            <th>Problem Weeks</th>
+            <th>Problem %</th>
+            <th>Stockout Qty</th>
+            <th>Expired Amount</th>
+            <th>Recommendation</th>
+          </tr>
+        </thead>
+        <tbody id="recommendationBody"></tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Daily Results</h2>
+          <p>Each day shows the thawing allocation, the chicken pull needed to replace usage, when that pull becomes usable, and how much usable inventory was available before usage sold.</p>
+        </div>
+      </div>
+
+      <table class="sticky-header-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Day</th>
+            <th>Build To</th>
+            <th>Chicken Pull</th>
+            <th>First Usable</th>
+            <th>Expires</th>
+            <th>Usable Start</th>
+            <th>Usage Sold</th>
+            <th>Stockout</th>
+            <th>Expired Today</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="analysisBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="firebase-auth.js"></script>
+  <script src="analyze.js"></script>
+</body>
+</html>

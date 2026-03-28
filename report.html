@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thawing Allocation Report</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <section class="panel hero">
+      <p class="eyebrow">Report</p>
+      <h1>Thawing Allocation Report</h1>
+      <p class="intro">
+        Build a cabinet-style thawing report from the saved chicken pull numbers already stored on the site.
+      </p>
+      <div class="hero-actions">
+        <a class="secondary-button link-button" href="index.html">Back To Analyzer</a>
+        <a class="secondary-button link-button" href="allocations.html">Edit Saved Pulls</a>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="field-grid">
+        <label class="field">
+          <span>Report Day</span>
+          <select id="reportDay"></select>
+        </label>
+
+        <label class="field">
+          <span>Thawing Doors</span>
+          <input type="number" id="doorCount" min="1" max="6" value="3">
+        </label>
+
+        <label class="field">
+          <span>Thawing Shelves Per Door</span>
+          <input type="number" id="shelvesPerDoor" min="4" max="20" value="14">
+        </label>
+
+        <label class="field">
+          <span>Pull Cabinet Doors</span>
+          <input type="number" id="pullDoorCount" min="0" max="4" value="1">
+        </label>
+
+        <label class="field">
+          <span>Pull Shelves Per Door</span>
+          <input type="number" id="pullShelvesPerDoor" min="0" max="20" value="6">
+        </label>
+      </div>
+
+      <div class="step-footer compact-footer">
+        <p class="step-hint" id="reportMeta"></p>
+        <button type="button" id="refreshReportButton">Refresh Report</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Chicken Totals</h2>
+          <p>Saved pull numbers for the selected day.</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Chicken Type</th>
+            <th>Saved Pull</th>
+            <th>Case Rows</th>
+            <th>Layout Note</th>
+          </tr>
+        </thead>
+        <tbody id="reportTotalsBody"></tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Pull Cabinet</h2>
+          <p>Cases load here first before the main thawing cabinets.</p>
+        </div>
+      </div>
+
+      <div id="pullCabinetReport" class="cabinet-report"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Cabinet Layout</h2>
+          <p>Remaining cases continue into the thawing cabinets in the same top-to-bottom order.</p>
+        </div>
+      </div>
+
+      <div id="cabinetReport" class="cabinet-report"></div>
+      <p class="assumptions" id="reportNotes"></p>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="firebase-auth.js"></script>
+  <script src="allocations-data.js"></script>
+  <script src="report.js"></script>
+</body>
+</html>

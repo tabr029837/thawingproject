@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page auth-page">
+    <section class="panel hero">
+      <p class="eyebrow">Account</p>
+      <h1>Sign In To Thaw Planning</h1>
+      <p class="intro">
+        Use your username and password to open your saved thawing allocations. New users can create an account here too.
+      </p>
+    </section>
+
+    <section class="panel auth-panel">
+      <div class="auth-toggle">
+        <button type="button" class="secondary-button" id="showSignInButton">Sign In</button>
+        <button type="button" class="secondary-button" id="showRegisterButton">Create Account</button>
+      </div>
+
+      <form id="signInForm" class="auth-form">
+        <div class="field-grid">
+          <label class="field">
+            <span>Username Or Email</span>
+            <input type="text" id="signInIdentifier" autocomplete="username">
+          </label>
+
+          <label class="field">
+            <span>Password</span>
+            <input type="password" id="signInPassword" autocomplete="current-password">
+          </label>
+        </div>
+
+        <div class="actions auth-actions">
+          <button type="submit">Sign In</button>
+        </div>
+      </form>
+
+      <form id="registerForm" class="auth-form is-hidden">
+        <div class="field-grid">
+          <label class="field">
+            <span>Username</span>
+            <input type="text" id="registerUsername" autocomplete="username">
+          </label>
+
+          <label class="field">
+            <span>Email</span>
+            <input type="email" id="registerEmail" autocomplete="email">
+          </label>
+
+          <label class="field">
+            <span>Password</span>
+            <input type="password" id="registerPassword" autocomplete="new-password">
+          </label>
+        </div>
+
+        <div class="actions auth-actions">
+          <button type="submit">Create Account</button>
+        </div>
+      </form>
+
+      <p class="save-message" id="authMessage"></p>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="firebase-auth.js"></script>
+  <script src="login.js"></script>
+</body>
+</html>
