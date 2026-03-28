@@ -846,6 +846,25 @@ tbody tr:last-child td {
     font-size: 15px;
   }
 
+  .compact-input-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .compact-input-table th,
+  .compact-input-table td {
+    min-width: 78px;
+  }
+
+  .compact-input-table input {
+    min-width: 64px;
+    min-height: 44px;
+    padding: 10px 8px;
+    font-size: 16px;
+    text-align: center;
+  }
+
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

@@ -49,14 +49,14 @@ function loadAnalysis() {
   assumptionsText.textContent =
     "Rule used: pulled chicken cannot be used on the pull day or the next day, first becomes usable on pull day + 2 days, and expires on pull day + 4 days (96 hours). Sundays count in timing, but there are no Sunday sales or pulls. Build To is the thawing allocation for the day, Chicken Pull is the amount replaced that day to return inventory to that target after sales and expirations, and Usable Start is the usable inventory available from prior chicken pulls before that day's usage sold. To avoid a cold start, the analyzer seeds a short pre-range history using weekday trend averages from the entered data, with the saved weekly plan as fallback. Rows without a full ending range still use weekday-based estimate values marked with an asterisk.";
 
-  const results = analyzeInventoryWindows(stored.data, stored.weeklyPlan || {});
+  const results = analyzeInventoryWindows(stored.data, stored.weeklyPlan || {}, stored.averageDailySales || 0);
   renderSummary(results);
   renderDailyResults(results.dailyRows);
   renderRecommendations(results.pullRecommendations, stored.weeklyPlan || {});
 }
 
-function analyzeInventoryWindows(data, weeklyPlan = {}) {
-  const warmupEntries = buildWarmupEntries(data, weeklyPlan);
+function analyzeInventoryWindows(data, weeklyPlan = {}, averageDailySales = 0) {
+  const warmupEntries = buildWarmupEntries(data, weeklyPlan, averageDailySales);
   const normalizedData = [...warmupEntries, ...data].map((entry) => {
     const pullDate = parseStoredDate(entry.date);
     const resolvedBuildTo = sanitizeNumber(entry.buildTo ?? entry.plannedBuildTo ?? entry.actualPull);
@@ -553,7 +553,7 @@ function average(values) {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-function buildWarmupEntries(data, weeklyPlan) {
+function buildWarmupEntries(data, weeklyPlan, averageDailySales) {
   if (!data.length || !weeklyPlan || Object.keys(weeklyPlan).length === 0) {
     return [];
   }
@@ -561,7 +561,7 @@ function buildWarmupEntries(data, weeklyPlan) {
   const firstDate = parseStoredDate(data[0].date);
   const warmupEntries = [];
   const warmupStart = addDays(firstDate, -14);
-  const trendAverages = buildWarmupTrendAverages(data, weeklyPlan);
+  const trendAverages = buildWarmupTrendAverages(data, weeklyPlan, averageDailySales);
 
   for (let currentDate = new Date(warmupStart); currentDate < firstDate; currentDate = addDays(currentDate, 1)) {
     const day = getDayLabel(currentDate);
@@ -591,7 +591,7 @@ function formatStoredDate(date) {
   });
 }
 
-function buildWarmupTrendAverages(data, weeklyPlan) {
+function buildWarmupTrendAverages(data, weeklyPlan, averageDailySales) {
   const grouped = {};
 
   data.forEach((entry) => {
@@ -613,7 +613,7 @@ function buildWarmupTrendAverages(data, weeklyPlan) {
 
   const allSoldValues = Object.values(grouped).flatMap((values) => values.sold);
   const allBuildToValues = Object.values(grouped).flatMap((values) => values.buildTo);
-  const overallSoldAverage = roundValue(average(allSoldValues));
+  const overallSoldAverage = roundValue(average(allSoldValues)) || sanitizeNumber(averageDailySales);
   const overallBuildToAverage = roundValue(average(allBuildToValues));
 
   return Object.fromEntries(
@@ -622,7 +622,7 @@ function buildWarmupTrendAverages(data, weeklyPlan) {
       const fallbackPlan = sanitizeNumber(weeklyPlan[day]);
       const soldAverage = dayValues?.sold?.length
         ? roundValue(average(dayValues.sold))
-        : overallSoldAverage || fallbackPlan;
+        : overallSoldAverage || sanitizeNumber(averageDailySales) || fallbackPlan;
       const buildToAverage = dayValues?.buildTo?.length
         ? roundValue(average(dayValues.buildTo))
         : overallBuildToAverage || fallbackPlan;

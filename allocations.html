@@ -22,11 +22,16 @@
     <section class="panel">
       <div class="field-grid">
         <label class="field">
+          <span>Average Daily Sales</span>
+          <input type="number" id="allocationAverageSales" min="0" step="0.1">
+        </label>
+
+        <label class="field">
           <span>Chicken Type</span>
           <select id="allocationChickenType"></select>
         </label>
       </div>
-      <p class="step-hint" id="allocationSelectionHint">Select a chicken type to edit its default pulls.</p>
+      <p class="step-hint" id="allocationSelectionHint">Average Daily Sales is shared across all chicken types. Select a chicken type to edit its default pulls.</p>
     </section>
 
     <section class="panel is-hidden" id="allocationDefaultsPanel">
@@ -37,7 +42,7 @@
         </div>
       </div>
 
-      <table>
+      <table class="compact-input-table">
         <thead>
           <tr>
             <th>Mon</th>
@@ -61,8 +66,8 @@
       </table>
 
       <div class="actions split-actions">
-        <button type="button" class="secondary-button" id="nextAllocationButton">Go To Next Chicken</button>
         <button type="button" id="saveAllocationsButton">Save Allocations</button>
+        <button type="button" class="secondary-button" id="nextAllocationButton">Go To Next Chicken</button>
       </div>
 
       <p class="save-message" id="allocationMessage"></p>

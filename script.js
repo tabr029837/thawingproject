@@ -4,14 +4,14 @@ const readPullValue = allocationsApi.sanitizePullValue || fallbackSanitizePullVa
 const readChickenConfigs = allocationsApi.getChickenConfigs || fallbackGetChickenConfigs;
 
 const FALLBACK_CHICKEN_CONFIGS = {
-  filets: { label: "Filets", pulls: { Mon: 30, Tue: 28, Wed: 32, Thu: 35, Fri: 45, Sat: 50 } },
-  "breakfast filets": { label: "Breakfast Filets", pulls: { Mon: 14, Tue: 14, Wed: 16, Thu: 16, Fri: 18, Sat: 20 } },
-  nuggets: { label: "Nuggets", pulls: { Mon: 20, Tue: 22, Wed: 25, Thu: 27, Fri: 35, Sat: 40 } },
-  strips: { label: "Strips", pulls: { Mon: 10, Tue: 12, Wed: 12, Thu: 14, Fri: 18, Sat: 20 } },
-  "grilled filets": { label: "Grilled Filets", pulls: { Mon: 8, Tue: 8, Wed: 10, Thu: 10, Fri: 12, Sat: 12 } },
-  "grilled nuggets": { label: "Grilled Nuggets", pulls: { Mon: 6, Tue: 6, Wed: 8, Thu: 8, Fri: 10, Sat: 10 } },
-  "spicy filets": { label: "Spicy Filets", pulls: { Mon: 12, Tue: 12, Wed: 14, Thu: 15, Fri: 18, Sat: 20 } },
-  "spicy breakfast filets": { label: "Spicy Breakfast Filets", pulls: { Mon: 6, Tue: 6, Wed: 8, Thu: 8, Fri: 10, Sat: 10 } }
+  filets: { label: "Filets", averageDailySales: 0, pulls: { Mon: 30, Tue: 28, Wed: 32, Thu: 35, Fri: 45, Sat: 50 } },
+  "breakfast filets": { label: "Breakfast Filets", averageDailySales: 0, pulls: { Mon: 14, Tue: 14, Wed: 16, Thu: 16, Fri: 18, Sat: 20 } },
+  nuggets: { label: "Nuggets", averageDailySales: 0, pulls: { Mon: 20, Tue: 22, Wed: 25, Thu: 27, Fri: 35, Sat: 40 } },
+  strips: { label: "Strips", averageDailySales: 0, pulls: { Mon: 10, Tue: 12, Wed: 12, Thu: 14, Fri: 18, Sat: 20 } },
+  "grilled filets": { label: "Grilled Filets", averageDailySales: 0, pulls: { Mon: 8, Tue: 8, Wed: 10, Thu: 10, Fri: 12, Sat: 12 } },
+  "grilled nuggets": { label: "Grilled Nuggets", averageDailySales: 0, pulls: { Mon: 6, Tue: 6, Wed: 8, Thu: 8, Fri: 10, Sat: 10 } },
+  "spicy filets": { label: "Spicy Filets", averageDailySales: 0, pulls: { Mon: 12, Tue: 12, Wed: 14, Thu: 15, Fri: 18, Sat: 20 } },
+  "spicy breakfast filets": { label: "Spicy Breakfast Filets", averageDailySales: 0, pulls: { Mon: 6, Tue: 6, Wed: 8, Thu: 8, Fri: 10, Sat: 10 } }
 };
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -352,6 +352,7 @@ function saveAndGo() {
   const payload = {
     type,
     chickenLabel: chickenConfigs[type]?.label || type,
+    averageDailySales: readPullValue(chickenConfigs[type]?.averageDailySales),
     weeklyPlan: readWeeklyPlan(),
     assumptions: {
       thawLeadDays: 2,
