@@ -12,7 +12,7 @@
       <p class="eyebrow">Thaw Planning</p>
       <h1>Chicken Thaw Analyzer</h1>
       <p class="intro">
-        Enter a weekly build-to plan, generate a date range, then fill in build-to and usage data for one
+        Enter a weekly build-to plan, generate a date range, then fill in daily demand data for one
         chicken type at a time.
       </p>
       <div class="hero-actions">
@@ -75,7 +75,7 @@
         <div>
           <p class="step-number">Step 2</p>
           <h2 id="step2Title">Weekly Build To Plan</h2>
-          <p class="step-copy" id="step2Copy">These values are used as the default build-to target for each generated day.</p>
+          <p class="step-copy" id="step2Copy">These values are used as the default build-to amount for each generated day.</p>
         </div>
         <button type="button" class="secondary-button" id="loadDefaultsButton">Load Type Defaults</button>
       </div>
@@ -115,14 +115,11 @@
           <p class="step-number" id="step3Number">Step 3</p>
           <h2 id="step3Title">Daily Input</h2>
           <p class="step-copy" id="step3Copy">
-            Build To is your target on-hand amount for the day, and Usage Sold is what was actually used. The analyzer derives the pull amount needed to get back to that target.
+            Build To is the total amount for the day. Usage Sold is the actual demand. Daily Pull follows your corrected formula, which simplifies to the same amount as `Usage Sold`, and that daily pull is what the analyzer tracks through the 48-hour thaw and 96-hour expiration window.
           </p>
           <p class="entry-guide">
             Enter your data in the highlighted columns. The `Usage Sold` column is set up for quick tabbing straight down.
           </p>
-        </div>
-        <div class="section-actions">
-          <button type="button" id="analyzeButton" disabled>Analyze Data</button>
         </div>
       </div>
 
@@ -131,9 +128,9 @@
           <tr>
             <th>Date</th>
             <th>Day</th>
-            <th>Planned Build To</th>
             <th>Build To</th>
             <th>Usage Sold</th>
+            <th>Daily Pull</th>
           </tr>
         </thead>
         <tbody id="tableBody">
@@ -142,6 +139,11 @@
           </tr>
         </tbody>
       </table>
+
+      <div class="step-footer compact-footer split-actions">
+        <p class="step-hint">When your daily data is filled in, continue to the analyzer.</p>
+        <button type="button" id="analyzeButton" disabled>Analyze Data</button>
+      </div>
     </section>
   </main>
 

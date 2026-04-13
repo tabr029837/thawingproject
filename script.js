@@ -231,7 +231,7 @@ function updateStepState() {
     ? usingModifyMode
       ? "Setup complete. Continue to modify the build-to numbers."
       : "Setup complete. Continue straight to the analyzer chart."
-    : "Choose a chicken type, start date, weeks, and pull option to continue.";
+    : "Choose a chicken type, start date, weeks, and build-to option to continue.";
 
   step2Hint.textContent = step2Complete
     ? "Build-to plan complete. You can move to daily input."
@@ -323,9 +323,9 @@ function generateTable() {
       row.innerHTML = `
         <td>${formatDate(currentDate)}</td>
         <td>${dayName}</td>
-        <td>${formatDisplayNumber(plannedBuildTo)}</td>
-        <td class="entry-cell actual-column"><input type="number" class="build-to" min="0" step="1" value="${plannedBuildTo}" aria-label="${dayName} build to"></td>
+        <td class="entry-cell actual-column"><input type="number" class="build-to" min="0" step="0.1" value="${plannedBuildTo}" aria-label="${dayName} build to"></td>
         <td class="entry-cell usage-column"><input type="number" class="usage-sold" min="0" step="0.1" value="" aria-label="${dayName} usage sold"></td>
+        <td class="daily-pull" aria-label="${dayName} daily pull">0</td>
       `;
 
       tableBody.appendChild(row);
@@ -336,6 +336,7 @@ function generateTable() {
   }
 
   tableGenerated = true;
+  setupDerivedPulls();
   setupColumnTabbing();
   focusFirstUsageInput();
 }
@@ -363,7 +364,6 @@ function saveAndGo() {
       return {
         date: cells[0].textContent,
         day: cells[1].textContent,
-        plannedBuildTo: readPullValue(cells[2].textContent),
         buildTo: readPullValue(row.querySelector(".build-to")?.value),
         sold: readPullValue(row.querySelector(".usage-sold")?.value)
       };
@@ -405,6 +405,35 @@ function setupColumnTabbing() {
   });
 }
 
+function setupDerivedPulls() {
+  const rows = Array.from(document.querySelectorAll("#tableBody tr"));
+
+  rows.forEach((row) => {
+    const buildToInput = row.querySelector(".build-to");
+    const usageInput = row.querySelector(".usage-sold");
+
+    [buildToInput, usageInput].forEach((input) => {
+      if (!input) {
+        return;
+      }
+
+      input.addEventListener("input", () => updateDerivedPullForRow(row));
+    });
+
+    updateDerivedPullForRow(row);
+  });
+}
+
+function updateDerivedPullForRow(row) {
+  const usageValue = readPullValue(row.querySelector(".usage-sold")?.value);
+  const dailyPull = roundDailyPull(usageValue);
+  const dailyPullCell = row.querySelector(".daily-pull");
+
+  if (dailyPullCell) {
+    dailyPullCell.textContent = formatDisplayNumber(dailyPull);
+  }
+}
+
 function focusFirstUsageInput() {
   const firstUsageInput = document.querySelector(".usage-sold");
   if (!firstUsageInput) {
@@ -442,6 +471,14 @@ function formatDate(date) {
 
 function formatDisplayNumber(value) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function roundDailyPull(value) {
+  const normalized = readPullValue(value);
+  const whole = Math.floor(normalized);
+  const fraction = normalized - whole;
+
+  return Math.abs(fraction - 0.5) < 0.000001 ? whole + 1 : whole;
 }
 
 function applyAppTheme(type) {

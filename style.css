@@ -764,8 +764,23 @@ tbody tr:last-child td {
 }
 
 .status-ok {
-  background: var(--ok-bg);
-  color: var(--ok-text);
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-frozen {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-expiration {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-neutral {
+  background: #e5e7eb;
+  color: #4b5563;
 }
 
 .status-warning {
@@ -796,6 +811,13 @@ tbody tr:last-child td {
 .danger-text {
   color: var(--danger-text);
   font-weight: 700;
+}
+
+.cell-note {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--muted);
 }
 
 .muted-text {
