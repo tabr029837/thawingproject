@@ -14,10 +14,6 @@
       <p class="intro">
         Build a cabinet-style thawing report from the saved chicken pull numbers already stored on the site.
       </p>
-      <div class="hero-actions">
-        <a class="secondary-button link-button" href="index.html">Back To Analyzer</a>
-        <a class="secondary-button link-button" href="allocations.html">Edit Saved Pulls</a>
-      </div>
     </section>
 
     <section class="panel">
@@ -62,17 +58,19 @@
         </div>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Chicken Type</th>
-            <th>Saved Pull</th>
-            <th>Case Rows</th>
-            <th>Layout Note</th>
-          </tr>
-        </thead>
-        <tbody id="reportTotalsBody"></tbody>
-      </table>
+      <div class="table-scroll">
+        <table class="sticky-first-column-table">
+          <thead>
+            <tr>
+              <th>Chicken Type</th>
+              <th>Saved Pull</th>
+              <th>Case Rows</th>
+              <th>Layout Note</th>
+            </tr>
+          </thead>
+          <tbody id="reportTotalsBody"></tbody>
+        </table>
+      </div>
     </section>
 
     <section class="panel">
@@ -98,6 +96,23 @@
       <p class="assumptions" id="reportNotes"></p>
     </section>
   </main>
+
+  <footer>
+    <nav class="footer-nav">
+      <a href="index.html">
+        <div class="icon">📊</div>
+        <span>Analyze</span>
+      </a>
+      <a href="allocations.html">
+        <div class="icon">📋</div>
+        <span>Pull Values</span>
+      </a>
+      <a href="report.html">
+        <div class="icon">🗄️</div>
+        <span>Allocation Reporting</span>
+      </a>
+    </nav>
+  </footer>
 
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>

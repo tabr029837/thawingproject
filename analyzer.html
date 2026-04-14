@@ -12,7 +12,7 @@
       <p class="eyebrow">Analysis</p>
       <h1 id="analysisTitle">Chicken Analysis</h1>
       <p class="intro" id="analysisSubtitle"></p>
-      <a class="secondary-button link-button" href="index.html">Back To Input</a>
+      <a href="index.html" class="secondary-button">Back to Input</a>
     </section>
 
     <section class="panel">
@@ -38,28 +38,38 @@
     <section class="panel">
       <div class="section-heading">
         <div>
-          <h2>Daily Results</h2>
-          <p>Frozen/stockout and expiration are shown separately using Build To, Usage, and the Day's Pull formula.</p>
+          <h2>Thaw Pipeline Tracking</h2>
+          <p>48-hour thaw window analysis: tracks rolling inventory that becomes usable, actual usage constraints, and future demand coverage gaps.</p>
         </div>
       </div>
 
-      <table class="sticky-header-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Day</th>
-            <th>Build_To</th>
-            <th>Starting_Inventory</th>
-            <th>Day's Usage</th>
-            <th>Day's Pull</th>
-            <th>Ending_Inventory</th>
-            <th>Frozen</th>
-            <th>Status</th>
-            <th>Explanation</th>
-          </tr>
-        </thead>
-        <tbody id="frozenStockoutBody"></tbody>
-      </table>
+      <div class="table-scroll">
+        <table class="sticky-header-table sticky-first-column-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Day</th>
+              <th>Build To</th>
+              <th>Starting Inv</th>
+              <th>Thaw Arrival (t-2)</th>
+              <th>Thawed Inv Pool</th>
+              <th>Usable Inv</th>
+              <th>Frozen (Not Thawed)</th>
+              <th>Day Usage</th>
+              <th>Actual Usage</th>
+              <th>Day Pull</th>
+              <th>End Inv</th>
+              <th>Future Demand</th>
+              <th>Coverage Gap</th>
+              <th>Status</th>
+              <th>Explanation</th>
+              <th>Thaw Tomorrow</th>
+              <th>Thaw In 2 Days</th>
+            </tr>
+          </thead>
+          <tbody id="frozenStockoutBody"></tbody>
+        </table>
+      </div>
     </section>
 
     <section class="panel">
@@ -70,23 +80,42 @@
         </div>
       </div>
 
-      <table class="sticky-header-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Day</th>
-            <th>Build To</th>
-            <th>Day's Usage</th>
-            <th>Day's Pull</th>
-            <th>Expiration</th>
-            <th>Status</th>
-            <th>Explanation</th>
-          </tr>
-        </thead>
-        <tbody id="expirationBody"></tbody>
-      </table>
+      <div class="table-scroll">
+        <table class="sticky-header-table sticky-first-column-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Day</th>
+              <th>Build To</th>
+              <th>Day's Usage</th>
+              <th>Day's Pull</th>
+              <th>Expiration</th>
+              <th>Status</th>
+              <th>Explanation</th>
+            </tr>
+          </thead>
+          <tbody id="expirationBody"></tbody>
+        </table>
+      </div>
     </section>
   </main>
+
+  <footer>
+    <nav class="footer-nav">
+      <a href="index.html">
+        <div class="icon">📊</div>
+        <span>Analyze</span>
+      </a>
+      <a href="allocations.html">
+        <div class="icon">📋</div>
+        <span>Pull Values</span>
+      </a>
+      <a href="report.html">
+        <div class="icon">🗄️</div>
+        <span>Allocation Reporting</span>
+      </a>
+    </nav>
+  </footer>
 
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>

@@ -19,8 +19,8 @@ const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const chickenTypeSelect = document.getElementById("chickenType");
 const startDateInput = document.getElementById("startDate");
 const weeksToBuildInput = document.getElementById("weeksToBuild");
-const pullModeInputs = document.querySelectorAll('input[name="pullMode"]');
 const tableBody = document.getElementById("tableBody");
+const toggleBuildToEditButton = document.getElementById("toggleBuildToEdit");
 const loadDefaultsButton = document.getElementById("loadDefaultsButton");
 const analyzeButton = document.getElementById("analyzeButton");
 const step1Panel = document.getElementById("step1Panel");
@@ -60,6 +60,7 @@ let chickenConfigs = safeGetConfigs();
 let step2Unlocked = false;
 let step3Unlocked = false;
 let tableGenerated = false;
+let buildToEditEnabled = false;
 
 bootstrapApp();
 
@@ -79,10 +80,7 @@ function initialize() {
   analyzeButton.addEventListener("click", saveAndGo);
   step1NextButton.addEventListener("click", handleStep1Next);
   step2NextButton.addEventListener("click", unlockStep3);
-
-  pullModeInputs.forEach((input) => {
-    input.addEventListener("change", handlePullModeChange);
-  });
+  toggleBuildToEditButton.addEventListener("click", toggleBuildToEditMode);
 
   appWeekdays.forEach((day) => {
     document.getElementById(`pull-${day}`).addEventListener("input", handlePullPlanChange);
@@ -100,11 +98,6 @@ function safeGetConfigs() {
   return Object.keys(configs || {}).length > 0 ? configs : fallbackGetChickenConfigs();
 }
 
-function getSelectedPullMode() {
-  const checked = Array.from(pullModeInputs).find((input) => input.checked);
-  return checked?.value || "";
-}
-
 function handleChickenTypeChange() {
   loadDefaultsForSelectedType();
   resetDownstreamProgress();
@@ -114,11 +107,6 @@ function handleChickenTypeChange() {
 }
 
 function handleSetupDetailsChange() {
-  resetDownstreamProgress();
-  updateStepState();
-}
-
-function handlePullModeChange() {
   resetDownstreamProgress();
   updateStepState();
 }
@@ -167,14 +155,6 @@ function handleStep1Next() {
     return;
   }
 
-  if (getSelectedPullMode() === "modify") {
-    step2Unlocked = true;
-    step3Unlocked = false;
-    updateStepState();
-    step2Panel.scrollIntoView({ behavior: "smooth", block: "start" });
-    return;
-  }
-
   step2Unlocked = false;
   step3Unlocked = true;
   generateTable();
@@ -195,43 +175,30 @@ function unlockStep3() {
 
 function updateStepState() {
   const step1Complete = isStep1Complete();
-  const usingModifyMode = getSelectedPullMode() === "modify";
   const step2Complete = isStep2Complete();
 
   step1NextButton.disabled = !step1Complete;
-  step1NextButton.textContent = usingModifyMode ? "Next: Modify Build To Numbers" : "Next: Analyzer Chart";
+  step1NextButton.textContent = "Next: Daily Input";
 
   if (!step1Complete) {
     step2Unlocked = false;
     step3Unlocked = false;
   }
 
-  if (!usingModifyMode) {
-    step2Unlocked = false;
-  }
-
   step2NextButton.disabled = !step2Complete;
-  if (!step2Unlocked) {
-    step3Unlocked = step3Unlocked && !usingModifyMode;
-  } else {
-    step3Unlocked = step3Unlocked && step2Complete;
-  }
 
-  step2Panel.classList.toggle("is-hidden", !usingModifyMode);
-  step2Panel.classList.toggle("is-locked", usingModifyMode && !step2Unlocked);
-  step2Panel.classList.toggle("is-open", usingModifyMode && step2Unlocked);
+  step2Panel.classList.add("is-hidden");
+  step2Panel.classList.remove("is-locked", "is-open");
 
   step3Panel.classList.toggle("is-locked", !step3Unlocked);
   step3Panel.classList.toggle("is-open", step3Unlocked);
 
   step1Panel.classList.toggle("is-complete", step1Complete);
-  step2Panel.classList.toggle("is-complete", usingModifyMode && step2Complete && step2Unlocked);
+  step2Panel.classList.remove("is-complete");
 
   step1Hint.textContent = step1Complete
-    ? usingModifyMode
-      ? "Setup complete. Continue to modify the build-to numbers."
-      : "Setup complete. Continue straight to the analyzer chart."
-    : "Choose a chicken type, start date, weeks, and build-to option to continue.";
+    ? "Setup complete. Continue to daily input."
+    : "Choose a chicken type, start date, and weeks to build to continue.";
 
   step2Hint.textContent = step2Complete
     ? "Build-to plan complete. You can move to daily input."
@@ -239,7 +206,7 @@ function updateStepState() {
 
   step2Title.textContent = "Modify Build To Numbers";
   step2Copy.textContent = "Adjust the Monday through Saturday build-to plan before you build the analyzer chart.";
-  step3Number.textContent = usingModifyMode ? "Step 3" : "Step 2";
+  step3Number.textContent = "Step 2";
   step3Title.textContent = "Analyzer Chart";
   step3Copy.textContent = "Generate the chart, then enter build-to and usage sold for each day.";
 
@@ -250,9 +217,8 @@ function isStep1Complete() {
   const type = chickenTypeSelect.value;
   const startDateValue = startDateInput.value;
   const weeksToBuild = readPullValue(weeksToBuildInput.value);
-  const pullMode = getSelectedPullMode();
 
-  return Boolean(type) && Boolean(startDateValue) && weeksToBuild >= 1 && weeksToBuild <= 8 && Boolean(pullMode);
+  return Boolean(type) && Boolean(startDateValue) && weeksToBuild >= 3 && weeksToBuild <= 8;
 }
 
 function isStep2Complete() {
@@ -323,9 +289,9 @@ function generateTable() {
       row.innerHTML = `
         <td>${formatDate(currentDate)}</td>
         <td>${dayName}</td>
-        <td class="entry-cell actual-column"><input type="number" class="build-to" min="0" step="0.1" value="${plannedBuildTo}" aria-label="${dayName} build to"></td>
-        <td class="entry-cell usage-column"><input type="number" class="usage-sold" min="0" step="0.1" value="" aria-label="${dayName} usage sold"></td>
-        <td class="daily-pull" aria-label="${dayName} daily pull">0</td>
+        <td class="entry-cell actual-column"><input type="number" class="build-to" min="0" step="0.1" value="${plannedBuildTo}" aria-label="${dayName} build to" disabled></td>
+        <td class="entry-cell usage-column"><input type="number" class="usage-sold" min="0" step="0.01" value="" aria-label="${dayName} usage sold"></td>
+        <td class="daily-pull" aria-label="${dayName} daily pull">0.00</td>
       `;
 
       tableBody.appendChild(row);
@@ -337,6 +303,7 @@ function generateTable() {
 
   tableGenerated = true;
   setupDerivedPulls();
+  setBuildToInputsEditable(buildToEditEnabled);
   setupColumnTabbing();
   focusFirstUsageInput();
 }
@@ -426,11 +393,11 @@ function setupDerivedPulls() {
 
 function updateDerivedPullForRow(row) {
   const usageValue = readPullValue(row.querySelector(".usage-sold")?.value);
-  const dailyPull = roundDailyPull(usageValue);
+  const dailyPull = usageValue;
   const dailyPullCell = row.querySelector(".daily-pull");
 
   if (dailyPullCell) {
-    dailyPullCell.textContent = formatDisplayNumber(dailyPull);
+    dailyPullCell.textContent = formatUsageNumber(dailyPull);
   }
 }
 
@@ -442,6 +409,34 @@ function focusFirstUsageInput() {
 
   firstUsageInput.focus();
   firstUsageInput.select();
+}
+
+function focusFirstBuildToInput() {
+  const firstBuildToInput = document.querySelector(".build-to");
+  if (!firstBuildToInput) {
+    return;
+  }
+
+  firstBuildToInput.focus();
+  firstBuildToInput.select();
+}
+
+function toggleBuildToEditMode() {
+  buildToEditEnabled = !buildToEditEnabled;
+  setBuildToInputsEditable(buildToEditEnabled);
+  toggleBuildToEditButton.textContent = buildToEditEnabled ? "editing enabled" : "click to edit";
+
+  if (buildToEditEnabled) {
+    focusFirstBuildToInput();
+  }
+}
+
+function setBuildToInputsEditable(enabled) {
+  const buildToInputs = Array.from(document.querySelectorAll(".build-to"));
+  buildToInputs.forEach((input) => {
+    input.disabled = !enabled;
+    input.classList.toggle("editable", enabled);
+  });
 }
 
 function resetDownstreamProgress() {
@@ -469,16 +464,8 @@ function formatDate(date) {
   });
 }
 
-function formatDisplayNumber(value) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
-function roundDailyPull(value) {
-  const normalized = readPullValue(value);
-  const whole = Math.floor(normalized);
-  const fraction = normalized - whole;
-
-  return Math.abs(fraction - 0.5) < 0.000001 ? whole + 1 : whole;
+function formatUsageNumber(value) {
+  return readPullValue(value).toFixed(2);
 }
 
 function applyAppTheme(type) {

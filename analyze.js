@@ -29,40 +29,87 @@ const THEME_CLASS_BY_TYPE = {
 loadAnalysis();
 
 function loadAnalysis() {
-  const stored = JSON.parse(localStorage.getItem("thawData"));
+  try {
+    const stored = JSON.parse(localStorage.getItem("thawData"));
 
-  if (!stored?.data?.length) {
+    if (!stored?.data?.length) {
+      frozenStockoutBody.innerHTML = `
+        <tr>
+          <td colspan="17" class="empty-state">No saved thaw data found. Go back and enter data first.</td>
+        </tr>
+      `;
+      expirationBody.innerHTML = `
+        <tr>
+          <td colspan="8" class="empty-state">No expiration data available yet.</td>
+        </tr>
+      `;
+      return;
+    }
+
+    applyAnalyzerTheme(stored.type);
+    analysisTitle.textContent = `${stored.chickenLabel} Flow Analysis`;
+    analysisSubtitle.textContent = `${stored.data.length} operating days processed in order`;
+    assumptionsText.textContent = "";
+
+    const results = runInventoryFlow(stored.data);
+    renderSummary(results);
+    renderRecommendationsSummary(results);
+    renderFrozenStockoutTable(results.dailyTable);
+    renderExpirationTable(results.dailyTable);
+  } catch (error) {
+    console.error("Error in loadAnalysis:", error);
     frozenStockoutBody.innerHTML = `
       <tr>
-        <td colspan="10" class="empty-state">No saved thaw data found. Go back and enter data first.</td>
+        <td colspan="17" class="empty-state">Error: ${error.message}</td>
       </tr>
     `;
-    expirationBody.innerHTML = `
-      <tr>
-        <td colspan="8" class="empty-state">No expiration data available yet.</td>
-      </tr>
-    `;
-    return;
+  }
+}
+
+function calculatePipelineUsableInventoryToday(dailyPulls, currentDayIndex) {
+  let totalUsable = 0;
+
+  for (let i = currentDayIndex - 2; i >= 0; i -= 1) {
+    totalUsable = roundValue(totalUsable + dailyPulls[i]);
   }
 
-  applyAnalyzerTheme(stored.type);
-  analysisTitle.textContent = `${stored.chickenLabel} Flow Analysis`;
-  analysisSubtitle.textContent = `${stored.data.length} operating days processed in order`;
-  assumptionsText.textContent = "";
-
-  const results = runInventoryFlow(stored.data);
-  renderSummary(results);
-  renderRecommendationsSummary(results);
-  renderFrozenStockoutTable(results.frozenInventoryTable);
-  renderExpirationTable(results.dailyTable);
+  return roundValue(totalUsable);
 }
 
 function runInventoryFlow(data) {
   const normalizedDays = normalizeDays(data).sort((left, right) => left.dateObj - right.dateObj);
+  
+  // Use actual data with seed carryover batches for prior-week beginning inventory
+  const extendedDays = normalizedDays;
+  const carryoverCount = 0;
+  
   const frozenInventoryTable = buildFrozenInventoryTable(normalizedDays);
   const seedBatches = buildCarryoverSeedBatches(normalizedDays);
   const batches = [...seedBatches];
   const dailyTable = [];
+  
+  const priorSaturdayDate = normalizedDays.length ? addDays(normalizedDays[0].dateObj, -2) : null;
+  const priorSundayDate = normalizedDays.length ? addDays(normalizedDays[0].dateObj, -1) : null;
+  const priorSaturdayPull = priorSaturdayDate
+    ? (seedBatches.find((batch) => formatDateKey(batch.pullDate) === formatDateKey(priorSaturdayDate))?.casesPulled || 0)
+    : 0;
+  const priorSundayPull = priorSundayDate
+    ? (seedBatches.find((batch) => formatDateKey(batch.pullDate) === formatDateKey(priorSundayDate))?.casesPulled || 0)
+    : 0;
+  
+  // Pre-calculate daily pulls based on buildTo values using extended history
+  const dailyPulls = [];
+  let previousBuildTo = 0;
+  normalizedDays.forEach((day, index) => {
+    const isDayLabel = getDayLabel(day.dateObj);
+    const buildTo = isDayLabel === "Sun" ? 0 : day.buildTo;
+    const demand = isDayLabel === "Sun" ? 0 : day.demand;
+    
+    const calculatedPull = roundValue(demand + (buildTo - previousBuildTo));
+    const dayPull = isDayLabel === "Sun" ? 0 : roundValue(Math.max(0, calculatedPull));
+    dailyPulls.push(dayPull);
+    previousBuildTo = buildTo;
+  });
 
   let totalDemand = 0;
   let totalPulled = 0;
@@ -71,11 +118,39 @@ function runInventoryFlow(data) {
   let totalExpiredCases = 0;
   let totalExpiredEvents = 0;
   let totalAtRiskCases = 0;
-  let previousEndingInventory = normalizedDays.length
-    ? roundValue(sumRemainingCases(getUsableBatchesBeforeDate(batches, normalizedDays[0].dateObj)))
+  let previousEndingInventory = extendedDays.length
+    ? roundValue(sumRemainingCases(getUsableBatchesBeforeDate(batches, extendedDays[0].dateObj)))
     : 0;
+  
+  // Track the running pool of thawed inventory
+  let previousThawedInventory = 0;
+  let previousActualUsage = 0;
+  
+  // Initialize thawed inventory from seed carryover batches available at the start of the prior day.
+  // This lets the first Monday include Saturday arrivals correctly.
+  if (normalizedDays.length) {
+    const priorDayDate = addDays(normalizedDays[0].dateObj, -1);
+    previousThawedInventory = roundValue(
+      sumRemainingCases(getUsableBatches(batches, priorDayDate))
+    );
+  }
 
-  normalizedDays.forEach((day) => {
+  extendedDays.forEach((day, extendedIndex) => {
+    // CORE RULE: Thaw arrival from pull 2 days ago
+    let thawArrivalToday = 0;
+    if (extendedIndex >= 2) {
+      thawArrivalToday = roundValue(dailyPulls[extendedIndex - 2]);
+    } else if (extendedIndex === 0 && getDayLabel(day.dateObj) === "Mon") {
+      thawArrivalToday = priorSaturdayPull;
+    } else if (extendedIndex === 1 && getDayLabel(day.dateObj) === "Tue") {
+      thawArrivalToday = priorSundayPull;
+    }
+    
+    // Track thawed inventory pool
+    const thawedInventoryToday = roundValue(
+      Math.max(0, previousThawedInventory + thawArrivalToday - previousActualUsage)
+    );
+    
     const batch = createBatch(day);
     batches.push(batch);
     totalPulled += batch.casesPulled;
@@ -86,7 +161,7 @@ function runInventoryFlow(data) {
     const usableBatches = getUsableBatches(batches, day.dateObj);
     const actualStartingInventory = roundValue(sumRemainingCases(usableBatches));
     const calculationError = !numbersMatch(expectedStartingInventory, actualStartingInventory);
-    const startingInventory = actualStartingInventory;
+    const startingInventory = previousEndingInventory;
     let remainingDemand = day.demand;
 
     usableBatches
@@ -119,6 +194,71 @@ function runInventoryFlow(data) {
       totalStockoutCases = roundValue(totalStockoutCases + remainingDemand);
     }
 
+    // NEW THAW PIPELINE LOGIC
+    const isDayLabel = getDayLabel(day.dateObj);
+    
+    // Step 4: USABLE INVENTORY - min of physical and thawed
+    const usableInventory = roundValue(Math.min(startingInventory, thawedInventoryToday));
+    
+    // Step 5: FROZEN INVENTORY - what exists but hasn't thawed
+    const frozen = roundValue(Math.max(0, startingInventory - usableInventory));
+    
+    // Step 6: ACTUAL USAGE - constrained by what's usable
+    const actualUsage = roundValue(Math.min(day.demand, usableInventory));
+    
+    // Step 7: ENDING INVENTORY
+    const thawEndingInventory = roundValue(startingInventory - actualUsage + dailyPulls[extendedIndex]);
+    
+    // Calculate future demand (next 2 operating days, excluding Sundays)
+    let futureDemandCount = 0;
+    let futureDemanDays = 0;
+    let hasFutureDemandData = false;
+    for (let i = extendedIndex + 1; i < extendedDays.length && futureDemandCount < 2; i += 1) {
+      const nextDayLabel = getDayLabel(extendedDays[i].dateObj);
+      if (nextDayLabel !== "Sun") {
+        futureDemanDays = roundValue(futureDemanDays + extendedDays[i].demand);
+        futureDemandCount += 1;
+      }
+    }
+    
+    if (futureDemandCount < 2 && (extendedIndex + 2 < extendedDays.length)) {
+      hasFutureDemandData = true;
+    } else if (futureDemandCount === 2) {
+      hasFutureDemandData = true;
+    }
+    
+    const coverageGap = roundValue(Math.max(0, futureDemanDays - usableInventory));
+    
+    // Pipeline visibility
+    const thawTomorrow = extendedIndex + 1 < dailyPulls.length ? roundValue(dailyPulls[extendedIndex + 1]) : 0;
+    const thawIn2Days = extendedIndex + 2 < dailyPulls.length ? roundValue(dailyPulls[extendedIndex + 2]) : 0;
+    
+    // Determine status based on new logic
+    let thawStatus = "No Risk";
+    let rootCauseDay = null;
+    if (frozen > 0) {
+      thawStatus = "Frozen";
+      rootCauseDay = extendedIndex - 2; // Chicken needed today should have been pulled 2 days ago
+    } else if (!hasFutureDemandData) {
+      thawStatus = "Not Enough Data";
+    } else if (coverageGap > 0) {
+      thawStatus = "Underpull Risk";
+    }
+    
+    // Explanation text
+    let explanation = "";
+    if (frozen > 0) {
+      const rootCauseDateObj = rootCauseDay >= 0 ? normalizedDays[rootCauseDay].dateObj : null;
+      const rootCauseDateStr = rootCauseDateObj ? formatStoredDate(rootCauseDateObj) : "Unknown";
+      explanation = `${formatNumber(frozen)} units still thawing (pull issue on ${rootCauseDateStr})`;
+    } else if (!hasFutureDemandData) {
+      explanation = "Need the 3rd and 4th day usage";
+    } else if (coverageGap > 0) {
+      explanation = `${formatNumber(coverageGap)} unit shortfall vs future demand`;
+    } else {
+      explanation = "Sufficient inventory and thaw coverage";
+    }
+
     totalDemand += day.demand;
     totalExpiredCases = roundValue(
       batches.reduce((sum, currentBatch) => sum + currentBatch.expiredCases, 0)
@@ -127,10 +267,11 @@ function runInventoryFlow(data) {
       batches.reduce((sum, currentBatch) => sum + currentBatch.atRiskCases, 0)
     );
 
+    // Push all days (including carryover for now to test)
     dailyTable.push({
       date: day.date,
       dateObj: new Date(day.dateObj),
-      day: getDayLabel(day.dateObj),
+      day: isDayLabel,
       buildTo: day.buildTo,
       adjustmentDateObj: addDays(day.dateObj, -2),
       adjustmentDay: getDayLabel(addDays(day.dateObj, -2)),
@@ -145,10 +286,29 @@ function runInventoryFlow(data) {
       stockout,
       status,
       calculationError,
-      shortageAmount: roundValue(Math.max(0, day.demand - startingInventory))
+      shortageAmount: roundValue(Math.max(0, day.demand - startingInventory)),
+      // Thaw pipeline fields - core metrics
+      thawArrivalToday,
+      thawedInventoryToday,
+      dailyPull: dailyPulls[extendedIndex],
+      usableInventory,
+      frozen,
+      actualUsage,
+      thawEndingInventory,
+      // Future analysis
+      futureDemand: futureDemanDays,
+      coverageGap,
+      thawStatus,
+      rootCauseDay,
+      explanation,
+      thawTomorrow,
+      thawIn2Days
     });
 
-    previousEndingInventory = endingInventory;
+    // Update tracking variables for next iteration
+    previousEndingInventory = thawEndingInventory;
+    previousThawedInventory = thawedInventoryToday;
+    previousActualUsage = actualUsage;
   });
 
   const enrichedDailyTable = enrichDailyTable(dailyTable);
@@ -184,8 +344,8 @@ function normalizeDays(data) {
     date: entry.date,
     dateObj: parseStoredDate(entry.date),
     buildTo: roundDailyPull(sanitizeNumber(entry.buildTo)),
-    demand: roundDailyPull(sanitizeNumber(entry.sold)),
-    casesPulled: roundDailyPull(sanitizeNumber(entry.sold))
+    demand: sanitizeNumber(entry.sold),
+    casesPulled: sanitizeNumber(entry.sold)
   }));
 }
 
@@ -216,9 +376,14 @@ function buildFrozenInventoryTable(days) {
 
 function calculateFrozenInventoryTable(days, initialStartingInventory) {
   const dayByDateKey = new Map(days.map((day) => [formatDateKey(day.dateObj), day]));
+  const fallbackDayByLabel = new Map();
+  days.forEach((day) => {
+    fallbackDayByLabel.set(getDayLabel(day.dateObj), day);
+  });
   const firstDate = days[0].dateObj;
   const lastDate = days[days.length - 1].dateObj;
   const table = [];
+  const thawHistoryStartDate = addDays(firstDate, -14);
   let currentDate = new Date(firstDate);
   let previousEndingInventory = roundValue(initialStartingInventory);
 
@@ -230,12 +395,25 @@ function calculateFrozenInventoryTable(days, initialStartingInventory) {
     const buildTo = isSunday ? 0 : roundValue(storedDay?.buildTo || 0);
     const demand = isSunday ? 0 : roundValue(storedDay?.demand || 0);
     const startingInventory = roundValue(previousEndingInventory);
-    const calculatedPull = roundValue(demand + (buildTo - startingInventory));
-    const dayPull = isSunday ? 0 : roundValue(Math.max(0, calculatedPull));
-    const rawEndingInventory = roundValue(startingInventory + dayPull - demand);
+    const dayPull = isSunday ? 0 : roundValue(storedDay?.casesPulled || 0);
+    const usableInventoryToday = calculateUsableInventoryToday({
+      currentDate,
+      historyStartDate: thawHistoryStartDate,
+      dayByDateKey,
+      fallbackDayByLabel
+    });
+    const usableInventory = roundValue(Math.min(startingInventory, usableInventoryToday));
+    const frozenAmount = roundValue(Math.max(0, startingInventory - usableInventory));
+    const actualUsage = isSunday ? 0 : roundValue(Math.min(demand, usableInventory));
     const endingInventory = isSunday
       ? startingInventory
-      : roundValue(Math.max(0, rawEndingInventory));
+      : roundValue(Math.max(0, startingInventory - actualUsage + dayPull));
+    const thawTomorrow = isSunday
+      ? 0
+      : getHistoricalPullAmount(addDays(currentDate, -1), dayByDateKey, fallbackDayByLabel);
+    const thawInTwoDays = isSunday
+      ? 0
+      : getHistoricalPullAmount(currentDate, dayByDateKey, fallbackDayByLabel);
 
     table.push({
       date: formatStoredDate(currentDate),
@@ -246,7 +424,13 @@ function calculateFrozenInventoryTable(days, initialStartingInventory) {
       isEstimatedStartingInventory: table.length === 0,
       demand,
       dayPull,
-      endingInventory
+      usableInventoryToday,
+      usableInventory,
+      actualUsage,
+      endingInventory,
+      frozenAmount,
+      thawTomorrow,
+      thawInTwoDays
     });
 
     previousEndingInventory = endingInventory;
@@ -268,21 +452,48 @@ function enrichFrozenInventoryTable(table) {
       frozenWindowRows.reduce((sum, currentRow) => sum + currentRow.demand, 0)
     );
     const hasFrozenWindowData = frozenWindowRows.every((currentRow) => currentRow.hasDemandData);
-    const frozenAmount = roundValue(Math.max(0, row.dayPull - frozenWindowDemand));
+    const coverageGap = roundValue(Math.max(0, frozenWindowDemand - row.usableInventory));
 
     return {
       ...row,
-      frozenAmount,
       frozenWindowDemand,
+      coverageGap,
       hasFrozenWindowData,
       ...getFrozenInventoryStatusDetails({
         ...row,
-        frozenAmount,
         frozenWindowDemand,
+        coverageGap,
         hasFrozenWindowData
       })
     };
   });
+}
+
+function calculateUsableInventoryToday({ currentDate, historyStartDate, dayByDateKey, fallbackDayByLabel }) {
+  let total = 0;
+  let pointer = new Date(historyStartDate);
+  const latestEligibleDate = addDays(currentDate, -2);
+
+  while (pointer.getTime() <= latestEligibleDate.getTime()) {
+    total = roundValue(total + getHistoricalPullAmount(pointer, dayByDateKey, fallbackDayByLabel));
+    pointer = addDays(pointer, 1);
+  }
+
+  return total;
+}
+
+function getHistoricalPullAmount(dateObj, dayByDateKey, fallbackDayByLabel) {
+  const dayLabel = getDayLabel(dateObj);
+  if (dayLabel === "Sun") {
+    return 0;
+  }
+
+  const directMatch = dayByDateKey.get(formatDateKey(dateObj));
+  if (directMatch) {
+    return roundValue(directMatch.casesPulled || 0);
+  }
+
+  return roundValue(fallbackDayByLabel.get(dayLabel)?.casesPulled || 0);
 }
 
 function createBatch(day) {
@@ -463,7 +674,7 @@ function enrichDailyTable(dailyTable) {
       expirationWindowRows.reduce((sum, currentRow) => sum + currentRow.demand, 0)
     );
     const frozenExcess = roundValue(Math.max(0, dayPull - frozenWindowDemand));
-    const expirationExcess = roundValue(Math.max(0, dayPull - expirationWindowDemand));
+    const expirationExcess = roundValue(Math.max(0, row.buildTo - expirationWindowDemand));
     const hasFrozenWindowData = frozenWindowRows.every((currentRow) => currentRow.hasDemandData);
     const hasExpirationWindowData = expirationWindowRows.every((currentRow) => currentRow.hasDemandData);
 
@@ -478,7 +689,7 @@ function enrichDailyTable(dailyTable) {
       hasFrozenWindowData,
       hasExpirationWindowData,
       frozenStatus: determineFrozenStatus(row, dayPull, hasFrozenWindowData, frozenExcess),
-      expirationStatus: determineExpirationStatus(dayPull, hasExpirationWindowData, expirationExcess)
+      expirationStatus: determineExpirationStatus(row.buildTo, hasExpirationWindowData, expirationExcess)
     };
   });
 }
@@ -499,14 +710,14 @@ function determineFrozenStatus(row, dayPull, hasFrozenWindowData, frozenExcess) 
   return "OK";
 }
 
-function determineExpirationStatus(dayPull, hasExpirationWindowData, expirationExcess) {
+function determineExpirationStatus(buildTo, hasExpirationWindowData, expirationExcess) {
   if (!hasExpirationWindowData) {
     return "NOT ENOUGH DATA";
   }
   if (expirationExcess > 0) {
     return "EXPIRATION RISK";
   }
-  if (numbersMatch(dayPull, 0)) {
+  if (numbersMatch(buildTo, 0)) {
     return "NO PULL";
   }
   return "OK";
@@ -544,6 +755,7 @@ function renderSummary(results) {
     { label: "% Of Perfect Days", value: formatPercent(perfectDayPercent) },
     { label: "# Bad Days", value: formatNumber(metrics.badDays.length) },
     { label: "Frozen Events; Cases", value: `${formatNumber(metrics.frozenEvents)}; ${formatNumber(metrics.frozenCases)}` },
+    { label: "Underpull Events; Cases", value: `${formatNumber(metrics.underpullEvents)}; ${formatNumber(metrics.underpullCases)}` },
     { label: "Expiration Events; Cases", value: `${formatNumber(metrics.expirationEvents)}; ${formatNumber(metrics.expirationCases)}` }
   ];
 
@@ -582,8 +794,8 @@ function buildExperimentMetrics(results) {
   const expirationByDate = new Map(
     results.dailyTable.map((row) => [row.date, { row, details: getExpirationStatusDetails(row) }])
   );
-  const evaluatedDays = results.frozenInventoryTable
-    .filter((row) => row.statusLabel !== "Carryover" && row.statusLabel !== "Not Enough Data")
+  const evaluatedDays = results.dailyTable
+    .filter((row) => row.thawStatus !== "Not Enough Data")
     .map((row) => {
       const expirationEntry = expirationByDate.get(row.date);
       if (!expirationEntry || expirationEntry.details.status === "Not Enough Data") {
@@ -593,7 +805,11 @@ function buildExperimentMetrics(results) {
       return {
         date: row.date,
         day: row.day,
-        frozenRow: row,
+        frozenRow: {
+          ...row,
+          statusLabel: row.thawStatus,
+          frozenAmount: row.frozen
+        },
         expirationRow: expirationEntry.row,
         expirationDetails: expirationEntry.details
       };
@@ -604,9 +820,14 @@ function buildExperimentMetrics(results) {
     return entry.frozenRow.statusLabel === "No Risk" && entry.expirationDetails.status === "No Risk";
   });
   const badDays = evaluatedDays.filter((entry) => {
-    return entry.frozenRow.statusLabel === "Frozen" || entry.expirationDetails.status === "Expiration";
+    return (
+      entry.frozenRow.statusLabel === "Frozen" ||
+      entry.frozenRow.statusLabel === "Underpull Risk" ||
+      entry.expirationDetails.status === "Expiration"
+    );
   });
   const frozenRows = evaluatedDays.filter((entry) => entry.frozenRow.statusLabel === "Frozen");
+  const underpullRows = evaluatedDays.filter((entry) => entry.frozenRow.statusLabel === "Underpull Risk");
   const expirationRows = evaluatedDays.filter((entry) => entry.expirationDetails.status === "Expiration");
 
   return {
@@ -615,6 +836,8 @@ function buildExperimentMetrics(results) {
     badDays,
     frozenEvents: frozenRows.length,
     frozenCases: roundValue(frozenRows.reduce((sum, entry) => sum + entry.frozenRow.frozenAmount, 0)),
+    underpullEvents: underpullRows.length,
+    underpullCases: roundValue(underpullRows.reduce((sum, entry) => sum + entry.frozenRow.coverageGap, 0)),
     expirationEvents: expirationRows.length,
     expirationCases: roundValue(
       expirationRows.reduce((sum, entry) => sum + entry.expirationRow.expirationExcess, 0)
@@ -632,8 +855,10 @@ function buildRecommendationSummaries(results) {
         day,
         tracked: 0,
         frozenEvents: 0,
+        underpullEvents: 0,
         expirationEvents: 0,
         frozenCases: 0,
+        underpullCases: 0,
         expirationCases: 0
       }
     ])
@@ -652,6 +877,11 @@ function buildRecommendationSummaries(results) {
       dayMetrics.frozenCases = roundValue(dayMetrics.frozenCases + entry.frozenRow.frozenAmount);
     }
 
+    if (entry.frozenRow.statusLabel === "Underpull Risk") {
+      dayMetrics.underpullEvents += 1;
+      dayMetrics.underpullCases = roundValue(dayMetrics.underpullCases + entry.frozenRow.coverageGap);
+    }
+
     if (entry.expirationDetails.status === "Expiration") {
       dayMetrics.expirationEvents += 1;
       dayMetrics.expirationCases = roundValue(
@@ -662,7 +892,7 @@ function buildRecommendationSummaries(results) {
 
   return weekdays.map((day) => {
     const item = grouped[day];
-    const issueCount = item.frozenEvents + item.expirationEvents;
+    const issueCount = item.frozenEvents + item.underpullEvents + item.expirationEvents;
     const issueRate = item.tracked > 0 ? issueCount / item.tracked : 0;
     let riskLevel = "none";
     let riskLabel = "No Risk";
@@ -697,7 +927,12 @@ function buildRecommendationSummaries(results) {
     const actions = [];
     if (item.frozenEvents > 0) {
       actions.push(
-        `Lower pull / build-to to reduce frozen risk (${formatNumber(item.frozenEvents)} event${item.frozenEvents === 1 ? "" : "s"}, ${formatNumber(item.frozenCases)} case${numbersMatch(item.frozenCases, 1) ? "" : "s"})`
+        `Fix pull execution 2 days earlier to reduce frozen inventory (${formatNumber(item.frozenEvents)} event${item.frozenEvents === 1 ? "" : "s"}, ${formatNumber(item.frozenCases)} case${numbersMatch(item.frozenCases, 1) ? "" : "s"})`
+      );
+    }
+    if (item.underpullEvents > 0) {
+      actions.push(
+        `Raise planned pull so thawed inventory covers day 3/4 demand (${formatNumber(item.underpullEvents)} event${item.underpullEvents === 1 ? "" : "s"}, ${formatNumber(item.underpullCases)} case${numbersMatch(item.underpullCases, 1) ? "" : "s"})`
       );
     }
     if (item.expirationEvents > 0) {
@@ -917,13 +1152,21 @@ function renderFrozenStockoutTable(dailyTable) {
           <td>${row.date}</td>
           <td>${row.day}</td>
           <td>${formatNumber(row.buildTo)}</td>
-          <td>${formatFrozenStartingInventory(row)}</td>
-          <td>${formatNumber(row.demand)}</td>
-          <td>${formatNumber(row.dayPull)}</td>
-          <td>${formatNumber(row.endingInventory)}</td>
-          <td class="${getFrozenMetricClass(row)}">${formatNumber(row.frozenAmount)}</td>
-          <td>${buildStatusPill(row.statusLabel)}</td>
+          <td>${formatNumber(row.startingInventory)}</td>
+          <td>${formatNumber(row.thawArrivalToday)}</td>
+          <td>${formatNumber(row.thawedInventoryToday)}</td>
+          <td>${formatNumber(row.usableInventory)}</td>
+          <td class="${row.frozen > 0 ? 'warning-text' : ''}">${formatNumber(row.frozen)}</td>
+          <td>${formatUsageNumber(row.demand)}</td>
+          <td>${formatNumber(row.actualUsage)}</td>
+          <td>${formatNumber(row.dailyPull)}</td>
+          <td>${formatNumber(row.thawEndingInventory)}</td>
+          <td>${formatNumber(row.futureDemand)}</td>
+          <td class="${row.coverageGap > 0 ? 'warning-text' : ''}">${formatNumber(row.coverageGap)}</td>
+          <td>${buildStatusPill(row.thawStatus)}</td>
           <td>${row.explanation}</td>
+          <td>${formatNumber(row.thawTomorrow)}</td>
+          <td>${formatNumber(row.thawIn2Days)}</td>
         </tr>
       `
     )
@@ -941,8 +1184,8 @@ function renderExpirationTable(dailyTable) {
           <td>${row.date}</td>
           <td>${row.day}</td>
           <td>${formatNumber(row.buildTo)}</td>
-          <td>${formatNumber(row.demand)}</td>
-          <td>${formatNumber(row.dayPull)}</td>
+          <td>${formatUsageNumber(row.demand)}</td>
+          <td>${formatUsageNumber(row.dayPull)}</td>
           <td class="${getExpirationMetricClass(row)}">${formatNumber(row.expirationExcess)}</td>
           <td>${buildStatusPill(statusDetails.status)}</td>
           <td>${statusDetails.explanation}</td>
@@ -980,21 +1223,22 @@ function getFrozenInventoryStatusDetails(row) {
       explanation: "Need the 3rd and 4th day usage"
     };
   }
-  if (numbersMatch(row.endingInventory, 0) && row.demand > row.startingInventory + row.dayPull) {
+  if (row.frozenAmount > 0) {
+    const rootCauseDate = formatStoredDate(addDays(row.dateObj, -2));
     return {
       statusLabel: "Frozen",
-      explanation: `Short ${formatNumber(roundValue(row.demand - (row.startingInventory + row.dayPull)))} case${numbersMatch(roundValue(row.demand - (row.startingInventory + row.dayPull)), 1) ? "" : "s"}`
+      explanation: `${formatNumber(row.frozenAmount)} units still thawing (pull issue on ${rootCauseDate})`
     };
   }
-  if (row.frozenAmount > 0) {
+  if (row.coverageGap > 0) {
     return {
-      statusLabel: "Frozen",
-      explanation: buildWindowComparisonText(row.dayPull, row.frozenWindowDemand, "Pull", "day 3/4 demand")
+      statusLabel: "Underpull Risk",
+      explanation: `${formatNumber(row.coverageGap)} unit shortfall vs future demand`
     };
   }
   return {
     statusLabel: "No Risk",
-    explanation: buildWindowComparisonText(row.dayPull, row.frozenWindowDemand, "Pull", "day 3/4 demand")
+    explanation: "Sufficient inventory and thaw coverage"
   };
 }
 
@@ -1042,6 +1286,9 @@ function getStatusPillClass(statusLabel) {
   }
   if (statusLabel === "Frozen") {
     return "status-frozen";
+  }
+  if (statusLabel === "Underpull Risk") {
+    return "status-warning";
   }
   if (statusLabel === "Expiration") {
     return "status-expiration";
@@ -1118,6 +1365,10 @@ function roundDailyPull(value) {
 
 function formatNumber(value) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function formatUsageNumber(value) {
+  return sanitizeNumber(value).toFixed(2);
 }
 
 function formatPercent(value) {

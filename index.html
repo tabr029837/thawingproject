@@ -15,10 +15,6 @@
         Enter a weekly build-to plan, generate a date range, then fill in daily demand data for one
         chicken type at a time.
       </p>
-      <div class="hero-actions">
-        <a class="secondary-button link-button" href="allocations.html">Adjust Cabinet Numbers</a>
-        <a class="secondary-button link-button" href="report.html">Thawing Allocation Report</a>
-      </div>
     </section>
 
     <section class="panel step-panel" id="step1Panel">
@@ -43,25 +39,15 @@
 
         <label class="field">
           <span>Weeks To Build</span>
-          <input type="number" id="weeksToBuild" min="1" max="8" value="4">
+          <select id="weeksToBuild">
+            <option value="3">3 weeks</option>
+            <option value="4" selected>4 weeks</option>
+            <option value="5">5 weeks</option>
+            <option value="6">6 weeks</option>
+            <option value="7">7 weeks</option>
+            <option value="8">8 weeks</option>
+          </select>
         </label>
-      </div>
-
-      <div class="choice-block">
-        <p class="choice-title">Build To Option</p>
-        <div class="choice-grid">
-          <label class="choice-card">
-            <input type="radio" name="pullMode" value="default">
-            <span class="choice-card-title">Use Default Build To Numbers</span>
-            <span class="choice-card-copy">Use the saved build-to numbers for this chicken and go straight to the analyzer chart.</span>
-          </label>
-
-          <label class="choice-card">
-            <input type="radio" name="pullMode" value="modify">
-            <span class="choice-card-title">Modify Build To Numbers</span>
-            <span class="choice-card-copy">Open one extra step so you can adjust the Monday through Saturday build-to plan first.</span>
-          </label>
-        </div>
       </div>
 
       <div class="step-footer">
@@ -80,28 +66,30 @@
         <button type="button" class="secondary-button" id="loadDefaultsButton">Load Type Defaults</button>
       </div>
 
-      <table class="compact-input-table">
-        <thead>
-          <tr>
-            <th>Mon</th>
-            <th>Tue</th>
-            <th>Wed</th>
-            <th>Thu</th>
-            <th>Fri</th>
-            <th>Sat</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><input type="number" id="pull-Mon" min="0" step="0.1"></td>
-            <td><input type="number" id="pull-Tue" min="0" step="0.1"></td>
-            <td><input type="number" id="pull-Wed" min="0" step="0.1"></td>
-            <td><input type="number" id="pull-Thu" min="0" step="0.1"></td>
-            <td><input type="number" id="pull-Fri" min="0" step="0.1"></td>
-            <td><input type="number" id="pull-Sat" min="0" step="0.1"></td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-scroll">
+        <table class="compact-input-table sticky-first-column-table">
+          <thead>
+            <tr>
+              <th>Mon</th>
+              <th>Tue</th>
+              <th>Wed</th>
+              <th>Thu</th>
+              <th>Fri</th>
+              <th>Sat</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><input type="number" id="pull-Mon" min="0" step="0.1"></td>
+              <td><input type="number" id="pull-Tue" min="0" step="0.1"></td>
+              <td><input type="number" id="pull-Wed" min="0" step="0.1"></td>
+              <td><input type="number" id="pull-Thu" min="0" step="0.1"></td>
+              <td><input type="number" id="pull-Fri" min="0" step="0.1"></td>
+              <td><input type="number" id="pull-Sat" min="0" step="0.1"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <div class="step-footer">
         <p class="step-hint" id="step2Hint">Fill in the build-to plan for Monday through Saturday.</p>
@@ -123,22 +111,24 @@
         </div>
       </div>
 
-      <table class="compact-input-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Day</th>
-            <th>Build To</th>
-            <th>Usage Sold</th>
-            <th>Daily Pull</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody">
-          <tr>
-            <td colspan="5" class="empty-state">Generate a table to start entering data.</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-scroll">
+        <table class="compact-input-table sticky-first-column-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Day</th>
+              <th>Build To <button type="button" id="toggleBuildToEdit" class="link-button small-link">click to edit</button></th>
+              <th>Usage Sold</th>
+              <th>Daily Pull</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr>
+              <td colspan="5" class="empty-state">Generate a table to start entering data.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <div class="step-footer compact-footer split-actions">
         <p class="step-hint">When your daily data is filled in, continue to the analyzer.</p>
@@ -146,6 +136,23 @@
       </div>
     </section>
   </main>
+
+  <footer>
+    <nav class="footer-nav">
+      <a href="index.html">
+        <div class="icon">📊</div>
+        <span>Analyze</span>
+      </a>
+      <a href="allocations.html">
+        <div class="icon">📋</div>
+        <span>Pull Values</span>
+      </a>
+      <a href="report.html">
+        <div class="icon">🗄️</div>
+        <span>Allocation Reporting</span>
+      </a>
+    </nav>
+  </footer>
 
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
